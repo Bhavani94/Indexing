@@ -1,0 +1,253 @@
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.*;
+
+public class CSE535Assignment {
+	int condition = 0;
+	// map structure to store terms with its postings
+	Map<String, Map<String, LinkedList<Integer>>> postings;
+	private LinkedList<terms> terms = new LinkedList<terms>();
+
+	LinkedList<Integer> docIDList = new LinkedList<Integer>();
+	Map<String, LinkedList<postings>> ListDocID = new HashMap<String, LinkedList<postings>>();
+	Map<String, LinkedList<PostingsFreq>> ListByFreq = new HashMap<String, LinkedList<PostingsFreq>>();
+
+	public void indexer(String fileName, String fileName1) throws Exception {
+		FileReader inputFile = new FileReader(fileName);
+		BufferedReader br = new BufferedReader(inputFile);
+		String line;
+		while ((line = br.readLine()) != null) {
+			String[] part1 = line.split("\\\\c");
+			String termname = part1[0];
+			String[] part2 = part1[1].split("\\\\m");
+			int freq = Integer.parseInt(part2[0]);
+			part2[1] = part2[1].replace("[", "");
+			part2[1] = part2[1].replace("]", "");
+			part2[1] = part2[1].replace(" ", "");
+			String[] part3 = part2[1].split(",");
+			int docID = Integer.parseInt(part3[0].split("/")[0]);
+			int occurance = Integer.parseInt(part3[0].split("/")[1]);
+
+			LinkedList<postings> postings1 = new LinkedList<postings>();
+			LinkedList<PostingsFreq> postings2 = new LinkedList<PostingsFreq>();
+
+			
+			getPostingObjectForLine(line, postings1,postings2);
+			
+			// LinkedList<postings> postings = new LinkedList<postings> ();
+			terms temp = new terms();
+			temp.termname = termname;
+			temp.freq = freq;
+			terms.add(temp);
+			postings temp1 = new postings();
+			temp1.postID = docID;
+			temp1.frequency = occurance;
+			// postings1.add(temp1);
+			// LinkedList<Integer> docIDList = new LinkedList<Integer>();
+			docIDList.add(docID);
+			
+				ListDocID.put(termname, postings1); // order by docID	
+			
+				ListByFreq.put(termname, postings2); // order by decreasing term frequency
+		}
+		readInput(fileName1);
+		// System.out.println(terms.getFirst().termname);
+		br.close();		
+	}
+/**
+ * This method reads the sample input file and performs TAAT AND operation
+ * @param fileName1
+ */
+	private void readInput(String fileName1) {
+
+		try {
+			FileReader inputFile = new FileReader(fileName1);
+
+			BufferedReader br = new BufferedReader(inputFile);
+			String line;
+			StringBuffer str = new StringBuffer();
+			StringBuffer str1 = new StringBuffer();
+	
+			int i=0;
+			while ((line = br.readLine()) != null) {
+				StringBuffer wordsperLine=new StringBuffer();
+				LinkedList<postings> lst=new LinkedList<postings>();
+				LinkedList<postings> glbllst=new LinkedList<postings>();
+				String[] words = line.split(" ");
+				//String word;
+				int comparisons=0;
+				for (String word : words) {
+					 //  DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+				       //get current date time with Date()
+				       //Date date = new Date();
+				       //System.out.println(dateFormat.format(date));
+					wordsperLine.append(word).append(" AND ");
+					
+					if(i==0){
+						i++;
+						lst.addAll(ListDocID.get(word));
+						glbllst.addAll(ListDocID.get(word));
+						Collections.sort(lst);
+						Collections.sort(glbllst);
+						
+					}else{
+					
+						for(postings pst:lst){
+							boolean flag=false;
+							LinkedList<postings> templst=ListDocID.get(word);
+							
+							for(postings tmplst:templst){
+								comparisons++;
+								if(pst.getPostID()==tmplst.getPostID()){
+									
+									flag=true;
+									break;
+								}
+							}
+							if(flag){
+								glbllst.add(pst);
+							}
+						}
+					}
+					for (postings post1 : ListDocID.get(word)) {
+						str.append(post1.getPostID() + " ");
+					}
+					
+						for (PostingsFreq post2 : ListByFreq.get(word)) {
+							str1.append(post2.getPostID() + " ");
+						}
+						outputlog(word + " Ordered by DocIDs: " + str.toString() + "\r\n");
+						outputlog(word + " Ordered by decreasing term frequecy: " + str1.toString() + "\r\n");	
+						
+				}
+				StringBuffer buff=new StringBuffer();
+				for (postings post3: glbllst)
+				{
+					buff.append(post3.getPostID()).append("  ");
+				}
+				outputlog(wordsperLine + ":::comparisons::::"+ String.valueOf(comparisons)+"are made:::" + buff.toString() + "\r\n");
+			}
+			br.close();
+		} 
+		catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * This method returns the posting object for a line in the file.
+	 * 
+	 * @param line
+	 */
+	private void getPostingObjectForLine(String line, LinkedList<postings> postings1,LinkedList<PostingsFreq> posting2) {
+		String innerString = line.substring(line.indexOf("[") + 1, line.indexOf("]"));
+		innerString = innerString.replace(" ", "");
+
+		String[] array = innerString.split(",");
+		for (String str : array) {
+			int i = 0;
+			postings temp = new postings();
+			PostingsFreq temp2 = new PostingsFreq();
+
+			String[] arr2 = str.split("/");
+			for (String str1 : arr2) {
+				if (i == 0) {
+					temp.setPostID(Integer.parseInt(str1));
+					temp2.setPostID(Integer.parseInt(str1));
+
+				} else {
+					temp.setFrequency(Integer.parseInt(str1));
+					temp2.setFrequency(Integer.parseInt(str1));
+				}
+				i++;
+			}
+			postings1.add(temp);
+			posting2.add(temp2);
+
+		}
+		Collections.sort(postings1);
+		Collections.sort(posting2);
+	}
+
+//	private void getPostingObjectForLine2(String line, LinkedList<PostingsFreq> postings2) {
+//		String innerString = line.substring(line.indexOf("[") + 1, line.indexOf("]"));
+//		innerString = innerString.replace(" ", "");
+//
+//		String[] array = innerString.split(",");
+//		for (String str : array) {
+//			int i = 0;
+//
+//			PostingsFreq temp = new PostingsFreq();
+//
+//			String[] arr2 = str.split("/");
+//			for (String str1 : arr2) {
+//				if (i == 0) {
+//					temp.setPostID(Integer.parseInt(str1));
+//
+//				} else {
+//					temp.setFrequency(Integer.parseInt(str1));
+//
+//				}
+//				i++;
+//			}
+//			postings2.add(temp);
+//
+//		}
+//		Collections.sort(postings2);
+//	}
+/**
+ * This method computes and displays the top k terms
+ * @param k
+ * @throws IOException
+ */
+	public void getTopK(int k) throws IOException {
+		LinkedList<terms> terms123 = terms;
+		Collections.sort(terms123, new frequencycomparator());
+		StringBuffer str = new StringBuffer();
+		for (int i = 0; i < k; i++) {
+			str.append(terms123.get(i).getTermname() + "\r\n");
+		}
+		outputlog(str.toString());
+		outputlog("###############");
+	}
+/**
+ * This method writes output to the file
+ * @param termsabc
+ * @throws IOException
+ */
+	public void outputlog(String termsabc) throws IOException {
+		try {
+			File file = new File("E:/output.log2.txt");
+			if (!file.exists()) {
+				file.createNewFile();
+			}
+
+			FileWriter fw = new FileWriter(file.getAbsoluteFile(), true);
+			BufferedWriter bw = new BufferedWriter(fw);
+			bw.write(termsabc);
+			bw.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public static void main(String[] args) throws Exception {
+		String fileName = "E:/term.idx";
+		String fileName1 = "E:/sample_input.txt";
+		try {
+			CSE535Assignment indexed = new CSE535Assignment();
+			indexed.indexer(fileName, fileName1);
+			indexed.getTopK(10);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+}
